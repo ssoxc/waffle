@@ -38,6 +38,16 @@ on:
         required: false
         type: string
         default: "ubuntu-latest"
+      enable_vercel_deploy:
+        required: false
+        type: boolean
+        default: false
+        description: "Enable Vercel deployment after successful PR creation"
+      vercel_project_name:
+        required: false
+        type: string
+        default: ""
+        description: "Custom name for the Vercel project (optional, defaults to repository name)"
     secrets:
       LLM_MODEL:
         required: false
@@ -48,6 +58,12 @@ on:
       PAT_TOKEN:
         required: false
       PAT_USERNAME:
+        required: false
+      VERCEL_TOKEN:
+        required: false
+      VERCEL_ORG_ID:
+        required: false
+      VERCEL_PROJECT_ID:
         required: false
 
   issues:
@@ -303,6 +319,42 @@ jobs:
               grep "branch created" branch_result.txt | sed 's/.*\///g; s/.expand=1//g' > branch_name.txt
           fi
 
+      - name: Install Vercel CLI
+        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
+        run: npm install -g vercel@latest
+
+      - name: Deploy to Vercel
+        id: vercel_deploy
+        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          VERCEL_PROJECT_NAME: ${{ inputs.vercel_project_name }}
+        run: |
+          # Set up Vercel authentication
+          echo "$VERCEL_TOKEN" | vercel login --stdin
+          
+          # Check if project exists, if not create it
+          if [ -n "$VERCEL_PROJECT_ID" ]; then
+            # Use existing project ID
+            echo "Using existing Vercel project: $VERCEL_PROJECT_ID"
+            vercel --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --yes --prod > deployment_output.txt 2>&1
+          else
+            # Create new project and deploy
+            PROJECT_NAME="${VERCEL_PROJECT_NAME:-$(basename ${{ github.repository }})}"
+            echo "Creating new Vercel project: $PROJECT_NAME"
+            vercel --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --name="$PROJECT_NAME" --yes --prod > deployment_output.txt 2>&1
+          fi
+          
+          # Extract deployment URL
+          DEPLOYMENT_URL=$(grep -o 'https://[^[:space:]]*\.vercel\.app' deployment_output.txt | head -1)
+          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "Deployment URL: $DEPLOYMENT_URL"
+          
+          # Save the deployment URL for later steps
+          echo "$DEPLOYMENT_URL" > /tmp/vercel_url.txt
+
       # Step leaves comment for when agent is invoked on PR
       - name: Analyze Push Logs (Updated PR or No Changes) # Skip comment if PR update was successful OR leave comment if the agent made no code changes
         uses: actions/github-script@v7
@@ -347,6 +399,7 @@ jobs:
           AGENT_RESPONDED: ${{ env.AGENT_RESPONDED || 'false' }}
           ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
           RESOLUTION_SUCCESS: ${{ steps.check_result.outputs.RESOLUTION_SUCCESS }}
+          VERCEL_URL: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_URL }}
         with:
           github-token: ${{ secrets.PAT_TOKEN || github.token }}
           script: |
@@ -391,11 +444,19 @@ jobs:
 
             // Check "success" log from resolver output
             if (success && prNumber) {
+              let commentBody = `A potential fix has been generated and a draft PR #${prNumber} has been created. Please review the changes.`;
+              
+              // Add Vercel deployment URL if available
+              const vercelUrl = process.env.VERCEL_URL || '';
+              if (vercelUrl) {
+                commentBody += `\n\n🚀 **Preview Deployment**: [View on Vercel](${vercelUrl})`;
+              }
+              
               github.rest.issues.createComment({
                 issue_number: issueNumber,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: `A potential fix has been generated and a draft PR #${prNumber} has been created. Please review the changes.`
+                body: commentBody
               });
               process.env.AGENT_RESPONDED = 'true';
             } else if (!success && branchName) {
