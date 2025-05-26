@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 export default function Home() {
   const [name, setName] = useState("World");
   const [isFocused, setIsFocused] = useState(false);
-  const [theme, setTheme] = useState("purple"); // Default theme
+  const [theme, setTheme] = useState("red"); // Default theme
   const [isLoading, setIsLoading] = useState(true);
 
   // Simulate loading state
@@ -21,6 +21,16 @@ export default function Home() {
   };
 
   const themes = {
+    red: {
+      primary: "bg-gradient-to-r from-red-600 to-rose-600",
+      secondary: "bg-red-100 dark:bg-red-900/20",
+      accent: "bg-red-500",
+      text: "text-red-700 dark:text-red-300",
+      border: "border-red-300 dark:border-red-700",
+      ring: "ring-red-500",
+      button: "bg-red-600 hover:bg-red-700",
+      buttonText: "text-white",
+    },
     purple: {
       primary: "bg-gradient-to-r from-purple-600 to-indigo-600",
       secondary: "bg-purple-100 dark:bg-purple-900/20",
@@ -57,10 +67,10 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex items-center justify-center min-h-screen bg-red-50 dark:bg-red-900">
         <div className="flex flex-col items-center">
-          <div className="w-16 h-16 border-4 border-t-purple-600 border-r-transparent border-b-purple-600 border-l-transparent rounded-full animate-spin"></div>
-          <p className="mt-4 text-lg font-medium text-gray-700 dark:text-gray-300">Loading your experience...</p>
+          <div className="w-16 h-16 border-4 border-t-red-600 border-r-transparent border-b-red-600 border-l-transparent rounded-full animate-spin"></div>
+          <p className="mt-4 text-lg font-medium text-red-700 dark:text-red-300">Loading your experience...</p>
         </div>
       </div>
     );
@@ -117,6 +127,13 @@ export default function Home() {
             <div className="mt-6">
               <p className={`text-sm font-medium ${currentTheme.text} mb-2`}>Choose a theme:</p>
               <div className="flex space-x-3">
+                <button
+                  onClick={() => setTheme('red')}
+                  className={`w-8 h-8 rounded-full bg-gradient-to-r from-red-600 to-rose-600
+                    ${theme === 'red' ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-300 dark:ring-offset-gray-800' : ''}
+                    transition-all duration-200 hover:scale-110`}
+                  aria-label="Red theme"
+                ></button>
                 <button 
                   onClick={() => setTheme('purple')}
                   className={`w-8 h-8 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 
