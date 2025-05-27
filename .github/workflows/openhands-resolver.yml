@@ -335,23 +335,23 @@ jobs:
           fi
 
       - name: Setup Node.js for Vercel
-        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
+        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
       - name: Install Vercel CLI
-        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
+        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true'
         run: npm install -g vercel@latest
 
       - name: Deploy to Vercel
         id: vercel_deploy
-        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
+        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          VERCEL_PROJECT_NAME: ${{ inputs.vercel_project_name }}
+          VERCEL_PROJECT_NAME: waffle
         run: |
           set -e  # Exit on any error
           
@@ -449,7 +449,7 @@ jobs:
           ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
           RESOLUTION_SUCCESS: ${{ steps.check_result.outputs.RESOLUTION_SUCCESS }}
           VERCEL_URL: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_URL }}
-          VERCEL_DEPLOY_ENABLED: ${{ inputs.enable_vercel_deploy }}
+          VERCEL_DEPLOY_ENABLED: 'true'
         with:
           github-token: ${{ secrets.PAT_TOKEN || github.token }}
           script: |
