@@ -29,6 +29,16 @@ on:
         required: false
         type: string
         default: ""
+      LLM_MAX_MESSAGE_CHARS:
+        required: false
+        type: number
+        default: 25000
+        description: "Maximum characters in LLM messages to prevent token limit issues"
+      SANDBOX_TIMEOUT:
+        required: false
+        type: number
+        default: 300
+        description: "Sandbox timeout in seconds"
       base_container_image:
         required: false
         type: string
@@ -103,6 +113,37 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Configure Git for large file handling
+        run: |
+          # Configure git to handle large files better and prevent token limit issues
+          git config diff.nodiff.command true
+          
+          # Create or update .gitattributes to handle large files
+          cat >> .gitattributes << 'EOF'
+          # Large files that can cause token limit issues - exclude from diffs
+          package-lock.json diff=nodiff linguist-generated=true
+          yarn.lock diff=nodiff linguist-generated=true
+          pnpm-lock.yaml diff=nodiff linguist-generated=true
+          Cargo.lock diff=nodiff linguist-generated=true
+          poetry.lock diff=nodiff linguist-generated=true
+          Pipfile.lock diff=nodiff linguist-generated=true
+          composer.lock diff=nodiff linguist-generated=true
+          Gemfile.lock diff=nodiff linguist-generated=true
+          
+          # Minified and bundled files
+          *.min.js diff=nodiff linguist-generated=true
+          *.min.css diff=nodiff linguist-generated=true
+          *.bundle.js diff=nodiff linguist-generated=true
+          *.bundle.css diff=nodiff linguist-generated=true
+          
+          # Generated files
+          dist/ diff=nodiff linguist-generated=true
+          build/ diff=nodiff linguist-generated=true
+          .next/ diff=nodiff linguist-generated=true
+          EOF
+          
+          echo "✅ Configured git attributes for large file handling"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -265,8 +306,16 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
           LLM_API_VERSION: ${{ inputs.LLM_API_VERSION }}
+          LLM_MAX_MESSAGE_CHARS: ${{ inputs.LLM_MAX_MESSAGE_CHARS || 25000 }}
+          SANDBOX_TIMEOUT: ${{ inputs.SANDBOX_TIMEOUT || 300 }}
           PYTHONPATH: ""
         run: |
+          echo "🔧 OpenHands Configuration:"
+          echo "  LLM_MAX_MESSAGE_CHARS: $LLM_MAX_MESSAGE_CHARS"
+          echo "  SANDBOX_TIMEOUT: $SANDBOX_TIMEOUT"
+          echo "  MAX_ITERATIONS: $MAX_ITERATIONS"
+          echo ""
+          
           cd /tmp && python -m openhands.resolver.resolve_issue \
             --selected-repo ${{ github.repository }} \
             --issue-number ${{ env.ISSUE_NUMBER }} \
