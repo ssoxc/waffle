@@ -414,18 +414,18 @@ jobs:
           
           # Set up Vercel authentication
           echo "Setting up Vercel authentication..."
-          echo "$VERCEL_TOKEN" | vercel login --stdin
+          # The token is automatically used when set as environment variable
           
           # Check if project exists, if not create it
           if [ -n "$VERCEL_PROJECT_ID" ]; then
             # Use existing project ID
             echo "Using existing Vercel project: $VERCEL_PROJECT_ID"
-            vercel --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --yes --prod > deployment_output.txt 2>&1
+            vercel deploy --prod --token="$VERCEL_TOKEN" > deployment_output.txt 2>&1
           else
             # Create new project and deploy
             PROJECT_NAME="${VERCEL_PROJECT_NAME:-$(basename ${{ github.repository }})}"
             echo "Creating new Vercel project: $PROJECT_NAME"
-            vercel --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --name="$PROJECT_NAME" --yes --prod > deployment_output.txt 2>&1
+            vercel deploy --prod --token="$VERCEL_TOKEN" --name="$PROJECT_NAME" > deployment_output.txt 2>&1
           fi
           
           # Show deployment output for debugging
