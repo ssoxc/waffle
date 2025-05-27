@@ -422,7 +422,8 @@ jobs:
             echo "Using existing Vercel project: $VERCEL_PROJECT_ID"
             mkdir -p .vercel
             echo "{\"projectId\":\"$VERCEL_PROJECT_ID\",\"orgId\":\"$VERCEL_ORG_ID\"}" > .vercel/project.json
-            if ! vercel deploy --prod --token="$VERCEL_TOKEN" > deployment_output.txt 2>&1; then
+            # Deploy to preview only (not production)
+            if ! vercel deploy --token="$VERCEL_TOKEN" > deployment_output.txt 2>&1; then
               echo "Deployment failed. Output:"
               cat deployment_output.txt
               exit 1
@@ -432,15 +433,15 @@ jobs:
             PROJECT_NAME="${VERCEL_PROJECT_NAME:-$(basename ${{ github.repository }})}"
             echo "Creating new Vercel project: $PROJECT_NAME"
             
-            # Try to deploy directly - Vercel will create the project automatically
+            # Try to deploy directly - Vercel will create the project automatically (preview only)
             echo "Deploying and creating project..."
-            if ! vercel deploy --prod --token="$VERCEL_TOKEN" --name="$PROJECT_NAME" > deployment_output.txt 2>&1; then
+            if ! vercel deploy --token="$VERCEL_TOKEN" --name="$PROJECT_NAME" > deployment_output.txt 2>&1; then
               echo "Deployment failed. Output:"
               cat deployment_output.txt
               
-              # Fallback: try without --name flag
+              # Fallback: try without --name flag (preview only)
               echo "Retrying deployment without project name..."
-              if ! vercel deploy --prod --token="$VERCEL_TOKEN" > deployment_output.txt 2>&1; then
+              if ! vercel deploy --token="$VERCEL_TOKEN" > deployment_output.txt 2>&1; then
                 echo "Deployment failed again. Output:"
                 cat deployment_output.txt
                 exit 1
@@ -451,6 +452,9 @@ jobs:
           # Show deployment output for debugging
           echo "Deployment output:"
           cat deployment_output.txt
+          
+          # Save the full deployment output for posting in comments
+          cp deployment_output.txt /tmp/vercel_full_output.txt
           
           # Extract deployment URL
           DEPLOYMENT_URL=$(grep -o 'https://[^[:space:]]*\.vercel\.app' deployment_output.txt | head -1)
@@ -469,6 +473,44 @@ jobs:
             echo "Error: Failed to extract deployment URL"
             exit 1
           fi
+
+      - name: Post Vercel Deployment Response
+        uses: actions/github-script@v7
+        if: always() # Post deployment info even if other steps fail
+        env:
+          ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
+          DEPLOYMENT_URL: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_URL }}
+        with:
+          github-token: ${{ secrets.PAT_TOKEN || github.token }}
+          script: |
+            const fs = require('fs');
+            const issueNumber = process.env.ISSUE_NUMBER;
+            const deploymentUrl = process.env.DEPLOYMENT_URL || '';
+            
+            let vercelOutput = '';
+            try {
+              vercelOutput = fs.readFileSync('/tmp/vercel_full_output.txt', 'utf8');
+            } catch (error) {
+              console.error('Error reading Vercel output file:', error);
+              vercelOutput = 'Could not read Vercel deployment output.';
+            }
+            
+            let commentBody = '## 🚀 Vercel Deployment Response\n\n';
+            
+            if (deploymentUrl) {
+              commentBody += `**Preview URL**: [${deploymentUrl}](${deploymentUrl})\n\n`;
+            }
+            
+            commentBody += '**Full Deployment Output:**\n```\n';
+            commentBody += vercelOutput;
+            commentBody += '\n```';
+            
+            github.rest.issues.createComment({
+              issue_number: issueNumber,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
 
       # Step leaves comment for when agent is invoked on PR
       - name: Analyze Push Logs (Updated PR or No Changes) # Skip comment if PR update was successful OR leave comment if the agent made no code changes
