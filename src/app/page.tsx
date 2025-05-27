@@ -143,61 +143,6 @@ export default function Home() {
           </div>
         </div>
         
-        {/* Features Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {[
-            {
-              title: "Interactive UI",
-              description: "Experience smooth animations and transitions as you interact with the page.",
-              icon: "/globe.svg"
-            },
-            {
-              title: "Theme Customization",
-              description: "Choose from multiple color themes to personalize your experience.",
-              icon: "/window.svg"
-            },
-            {
-              title: "Responsive Design",
-              description: "Enjoy a beautiful interface on any device, from mobile to desktop.",
-              icon: "/file.svg"
-            }
-          ].map((feature, index) => (
-            <div 
-              key={index}
-              className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 
-                transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-            >
-              <div className={`w-12 h-12 ${currentTheme.accent} rounded-full flex items-center justify-center mb-4`}>
-                <Image
-                  src={feature.icon}
-                  alt={`${feature.title} icon`}
-                  width={24}
-                  height={24}
-                  className="text-white"
-                />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">{feature.title}</h3>
-              <p className="text-gray-600 dark:text-gray-300">{feature.description}</p>
-            </div>
-          ))}
-        </div>
-        
-        {/* Call to Action */}
-        <div className="text-center">
-          <a
-            href="https://nextjs.org/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={`inline-flex items-center px-6 py-3 ${currentTheme.button} text-base font-medium ${currentTheme.buttonText} rounded-full shadow-lg
-              transition-all duration-300 hover:scale-105 hover:shadow-xl`}
-          >
-            Learn more about Next.js
-            <svg className="ml-2 w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path>
-            </svg>
-          </a>
-        </div>
-        
         {/* Footer */}
         <footer className="mt-16 text-center text-sm text-gray-500 dark:text-gray-400">
           <div className="flex justify-center space-x-6 mb-4">
