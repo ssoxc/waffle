@@ -414,16 +414,15 @@ jobs:
           
           # Set up Vercel authentication
           echo "Setting up Vercel authentication..."
-          # Create .vercelrc file for authentication
-          echo "{\"token\":\"$VERCEL_TOKEN\"}" > ~/.vercelrc
+          echo "Using token-based authentication"
           
           # Check if project exists, if not create it
           if [ -n "$VERCEL_PROJECT_ID" ]; then
             # Use existing project ID - create vercel.json with project config
             echo "Using existing Vercel project: $VERCEL_PROJECT_ID"
-            echo "{\"projectId\":\"$VERCEL_PROJECT_ID\",\"orgId\":\"$VERCEL_ORG_ID\"}" > .vercel/project.json
             mkdir -p .vercel
-            if ! vercel deploy --prod > deployment_output.txt 2>&1; then
+            echo "{\"projectId\":\"$VERCEL_PROJECT_ID\",\"orgId\":\"$VERCEL_ORG_ID\"}" > .vercel/project.json
+            if ! vercel deploy --prod --token="$VERCEL_TOKEN" > deployment_output.txt 2>&1; then
               echo "Deployment failed. Output:"
               cat deployment_output.txt
               exit 1
@@ -435,13 +434,13 @@ jobs:
             
             # Try to deploy directly - Vercel will create the project automatically
             echo "Deploying and creating project..."
-            if ! vercel deploy --prod --name="$PROJECT_NAME" > deployment_output.txt 2>&1; then
+            if ! vercel deploy --prod --token="$VERCEL_TOKEN" --name="$PROJECT_NAME" > deployment_output.txt 2>&1; then
               echo "Deployment failed. Output:"
               cat deployment_output.txt
               
               # Fallback: try without --name flag
               echo "Retrying deployment without project name..."
-              if ! vercel deploy --prod > deployment_output.txt 2>&1; then
+              if ! vercel deploy --prod --token="$VERCEL_TOKEN" > deployment_output.txt 2>&1; then
                 echo "Deployment failed again. Output:"
                 cat deployment_output.txt
                 exit 1
