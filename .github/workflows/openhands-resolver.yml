@@ -319,6 +319,27 @@ jobs:
               grep "branch created" branch_result.txt | sed 's/.*\///g; s/.expand=1//g' > branch_name.txt
           fi
 
+      - name: Checkout updated code for deployment
+        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
+        run: |
+          # Get the branch name from the PR creation step
+          if [ -f /tmp/pr_number.txt ]; then
+            PR_NUMBER=$(cat /tmp/pr_number.txt)
+            # Get the branch name for this PR
+            BRANCH_NAME="openhands-fix-issue-${{ env.ISSUE_NUMBER }}"
+            echo "Checking out branch: $BRANCH_NAME"
+            git fetch origin $BRANCH_NAME
+            git checkout $BRANCH_NAME
+          else
+            echo "No PR created, staying on current branch"
+          fi
+
+      - name: Setup Node.js for Vercel
+        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
       - name: Install Vercel CLI
         if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
         run: npm install -g vercel@latest
@@ -332,7 +353,21 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_PROJECT_NAME: ${{ inputs.vercel_project_name }}
         run: |
+          set -e  # Exit on any error
+          
+          # Validate required environment variables
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "Error: VERCEL_TOKEN is required for deployment"
+            exit 1
+          fi
+          
+          if [ -z "$VERCEL_ORG_ID" ]; then
+            echo "Error: VERCEL_ORG_ID is required for deployment"
+            exit 1
+          fi
+          
           # Set up Vercel authentication
+          echo "Setting up Vercel authentication..."
           echo "$VERCEL_TOKEN" | vercel login --stdin
           
           # Check if project exists, if not create it
@@ -347,13 +382,27 @@ jobs:
             vercel --token="$VERCEL_TOKEN" --scope="$VERCEL_ORG_ID" --name="$PROJECT_NAME" --yes --prod > deployment_output.txt 2>&1
           fi
           
+          # Show deployment output for debugging
+          echo "Deployment output:"
+          cat deployment_output.txt
+          
           # Extract deployment URL
           DEPLOYMENT_URL=$(grep -o 'https://[^[:space:]]*\.vercel\.app' deployment_output.txt | head -1)
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-          echo "Deployment URL: $DEPLOYMENT_URL"
           
-          # Save the deployment URL for later steps
-          echo "$DEPLOYMENT_URL" > /tmp/vercel_url.txt
+          if [ -z "$DEPLOYMENT_URL" ]; then
+            echo "Warning: Could not extract deployment URL from output"
+            # Try alternative extraction methods
+            DEPLOYMENT_URL=$(grep -o 'https://[^[:space:]]*\.vercel\.app' deployment_output.txt | tail -1)
+          fi
+          
+          if [ -n "$DEPLOYMENT_URL" ]; then
+            echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+            echo "Deployment URL: $DEPLOYMENT_URL"
+            echo "$DEPLOYMENT_URL" > /tmp/vercel_url.txt
+          else
+            echo "Error: Failed to extract deployment URL"
+            exit 1
+          fi
 
       # Step leaves comment for when agent is invoked on PR
       - name: Analyze Push Logs (Updated PR or No Changes) # Skip comment if PR update was successful OR leave comment if the agent made no code changes
@@ -400,6 +449,7 @@ jobs:
           ISSUE_NUMBER: ${{ env.ISSUE_NUMBER }}
           RESOLUTION_SUCCESS: ${{ steps.check_result.outputs.RESOLUTION_SUCCESS }}
           VERCEL_URL: ${{ steps.vercel_deploy.outputs.DEPLOYMENT_URL }}
+          VERCEL_DEPLOY_ENABLED: ${{ inputs.enable_vercel_deploy }}
         with:
           github-token: ${{ secrets.PAT_TOKEN || github.token }}
           script: |
@@ -448,8 +498,10 @@ jobs:
               
               // Add Vercel deployment URL if available
               const vercelUrl = process.env.VERCEL_URL || '';
-              if (vercelUrl) {
+              if (vercelUrl && vercelUrl !== '') {
                 commentBody += `\n\n🚀 **Preview Deployment**: [View on Vercel](${vercelUrl})`;
+              } else if (process.env.VERCEL_DEPLOY_ENABLED === 'true') {
+                commentBody += `\n\n⚠️ **Note**: Vercel deployment was attempted but may have failed. Check the workflow logs for details.`;
               }
               
               github.rest.issues.createComment({
