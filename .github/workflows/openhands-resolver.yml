@@ -369,7 +369,7 @@ jobs:
           fi
 
       - name: Checkout updated code for deployment
-        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true' && inputs.enable_vercel_deploy == true
+        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true'
         run: |
           # Get the branch name from the PR creation step
           if [ -f /tmp/pr_number.txt ]; then
