@@ -384,18 +384,15 @@ jobs:
           fi
 
       - name: Setup Node.js for Vercel
-        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: '18'
 
       - name: Install Vercel CLI
-        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true'
         run: npm install -g vercel@latest
 
       - name: Deploy to Vercel
         id: vercel_deploy
-        if: steps.check_result.outputs.RESOLUTION_SUCCESS == 'true'
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
