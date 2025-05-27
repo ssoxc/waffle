@@ -67,8 +67,8 @@ export default function Home() {
   }
 
   return (
-    <div className={`min-h-screen ${currentTheme.secondary} transition-all duration-500 ease-in-out`}>
-      <div className="max-w-5xl mx-auto px-4 py-12 sm:px-6 lg:px-8">
+    <div className={`${currentTheme.secondary} transition-all duration-500 ease-in-out w-full`}>
+      <div className="max-w-5xl mx-auto">
         
         {/* Hero Section with Animated Gradient */}
         <div className={`${currentTheme.primary} rounded-2xl shadow-xl overflow-hidden mb-12 transition-all duration-500`}>
