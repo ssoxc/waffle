@@ -1,0 +1,13 @@
+
+> waffle@0.1.0 dev
+> next dev --turbopack -p 53264
+
+   ▲ Next.js 15.3.2 (Turbopack)
+   - Local:        http://localhost:53264
+   - Network:      http://172.17.0.2:53264
+
+ ✓ Starting...
+ ✓ Ready in 931ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.5s
+ GET / 200 in 2823ms
